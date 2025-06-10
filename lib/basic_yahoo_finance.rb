@@ -23,16 +23,17 @@ module BasicYahooFinance
       @crumb = fetch_crumb(@cookie)
     end
 
-   def find_symbol_by_isin(isins_or_isin)
+    def find_symbol_by_isin(isins_or_isin)
       hash_result = {}
       isins = make_symbols_array(isins_or_isin)
 
       http = Net::HTTP::Persistent.new
-      http.override_headers["User-Agent"] = "BYF/#{BasicYahooFinance::VERSION}"
+      http.override_headers["User-Agent"] = USER_AGENT
+      http.override_headers["Cookie"] = @cookie
       isins.each do |isin|
-        uri = URI("#{API_URL}/v1/finance/search?q=#{isin}&quotesCount=1&newsCount=0&listsCount=0&quotesQueryId=tss_match_phrase_query")
-        response = http.request(uri)
-        hash_result.store(isin, process_isin_output(JSON.parse(response.body)))
+      uri = URI("#{API_URL}/v1/finance/search?q=#{isin}&quotesCount=1&newsCount=0&listsCount=0&quotesQueryId=tss_match_phrase_query&crumb=#{@crumb}")
+      response = http.request(uri)
+      hash_result.store(isin, process_isin_output(JSON.parse(response.body)))
         sleep 0.1 # the sleep is needed to avoid request limit
       rescue Net::HTTPBadResponse, Net::HTTPNotFound, Net::HTTPError, Net::HTTPServerError, JSON::ParserError => e
         hash_result.store(isin, "HTTP Error: #{response.body}, e.message: #{e.message}")
@@ -47,9 +48,10 @@ module BasicYahooFinance
       hash_result = {}
       symbols = make_symbols_array(symbol)
       http = Net::HTTP::Persistent.new
-      http.override_headers["User-Agent"] = "BYF/#{BasicYahooFinance::VERSION}"
+      http.override_headers["User-Agent"] = USER_AGENT
+      http.override_headers["Cookie"] = @cookie
       symbols.each do |sym|
-        query_params = []
+        query_params = ["crumb=#{@crumb}"]
         query_params << "interval=#{interval}" if interval
         query_params << "range=#{range}" if range
         query_params << "profile=#{profile}" if profile
