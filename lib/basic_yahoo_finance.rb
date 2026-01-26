@@ -44,6 +44,29 @@ module BasicYahooFinance
       hash_result
     end
 
+    # Returns full quote data from search API
+    # Similar to find_symbol_by_isin but returns complete quote object with sector, industry, etc.
+    def search_by_isin(isins_or_isin)
+      hash_result = {}
+      isins = make_symbols_array(isins_or_isin)
+
+      http = Net::HTTP::Persistent.new
+      http.override_headers["User-Agent"] = USER_AGENT
+      http.override_headers["Cookie"] = @cookie
+      isins.each do |isin|
+        uri = URI("#{API_URL}/v1/finance/search?q=#{isin}&quotesCount=1&newsCount=0&listsCount=0&quotesQueryId=tss_match_phrase_query&crumb=#{@crumb}")
+        response = http.request(uri)
+        hash_result.store(isin, process_search_output(JSON.parse(response.body)))
+        sleep 0.1 # the sleep is needed to avoid request limit
+      rescue Net::HTTPBadResponse, Net::HTTPNotFound, Net::HTTPError, Net::HTTPServerError, JSON::ParserError
+        hash_result.store(isin, nil)
+      end
+
+      http.shutdown
+
+      hash_result
+    end
+
     def charts(symbol, mod: nil, range: "1d", interval: "1d", profile: nil) # rubocop:disable Metrics/MethodLength
       hash_result = {}
       symbols = make_symbols_array(symbol)
@@ -113,6 +136,26 @@ module BasicYahooFinance
 
     def process_isin_output(json)
       json["quotes"]&.dig(0, "symbol")
+    end
+
+    # Returns structured hash with all quote fields from search API
+    def process_search_output(json)
+      quote = json["quotes"]&.dig(0)
+      return nil unless quote
+
+      {
+        symbol: quote["symbol"],
+        short_name: quote["shortname"],
+        long_name: quote["longname"],
+        exchange: quote["exchange"],
+        exchange_display: quote["exchDisp"],
+        quote_type: quote["quoteType"],
+        type_display: quote["typeDisp"],
+        sector: quote["sector"],
+        sector_display: quote["sectorDisp"],
+        industry: quote["industry"],
+        industry_display: quote["industryDisp"]
+      }
     end
 
     def process_chart_output(json, mod)

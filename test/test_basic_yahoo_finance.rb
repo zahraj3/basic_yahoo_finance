@@ -145,4 +145,66 @@ class BasicYahooFinanceTest < Minitest::Test
     result = @query.send(:process_chart_output, json, nil)
     assert_equal({ "code" => "Not Found" }, result)
   end
+
+  def test_search_by_isin
+    result = @query.search_by_isin("US0378331005") # Apple Inc. ISIN
+    assert_includes(result, "US0378331005")
+    assert result["US0378331005"].is_a?(Hash)
+    assert_equal "AAPL", result["US0378331005"][:symbol]
+  end
+
+  def test_search_by_isin_invalid
+    result = @query.search_by_isin("INVALID123")
+    assert_includes(result, "INVALID123")
+    assert_nil result["INVALID123"]
+  end
+
+  def test_search_by_isin_multiple
+    result = @query.search_by_isin(["US0378331005", "US5949181045"]) # Apple and Microsoft ISINs
+    assert_includes(result, "US0378331005")
+    assert_includes(result, "US5949181045")
+  end
+
+  def test_process_search_output
+    json = {
+      "quotes" => [
+        {
+          "symbol" => "AAPL",
+          "shortname" => "Apple Inc.",
+          "longname" => "Apple Inc.",
+          "exchange" => "NMS",
+          "exchDisp" => "NASDAQ",
+          "quoteType" => "EQUITY",
+          "typeDisp" => "Equity",
+          "sector" => "Technology",
+          "sectorDisp" => "Technology",
+          "industry" => "Consumer Electronics",
+          "industryDisp" => "Consumer Electronics"
+        }
+      ]
+    }
+    result = @query.send(:process_search_output, json)
+    assert result.is_a?(Hash)
+    assert_equal "AAPL", result[:symbol]
+    assert_equal "Apple Inc.", result[:short_name]
+    assert_equal "Apple Inc.", result[:long_name]
+    assert_equal "NASDAQ", result[:exchange_display]
+    assert_equal "Equity", result[:type_display]
+    assert_equal "Technology", result[:sector]
+    assert_equal "Technology", result[:sector_display]
+    assert_equal "Consumer Electronics", result[:industry]
+    assert_equal "Consumer Electronics", result[:industry_display]
+  end
+
+  def test_process_search_output_empty
+    json = { "quotes" => [] }
+    result = @query.send(:process_search_output, json)
+    assert_nil result
+  end
+
+  def test_process_search_output_nil_quotes
+    json = { "quotes" => nil }
+    result = @query.send(:process_search_output, json)
+    assert_nil result
+  end
 end

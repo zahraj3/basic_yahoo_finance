@@ -53,6 +53,38 @@ data["AVEM"]["regularMarketPrice"]["raw"]
 # 52.72
 ```
 
+### Search by ISIN
+
+You can search for securities by their ISIN and get full quote data including sector and industry information:
+
+```ruby
+query = BasicYahooFinance::Query.new
+
+# Search by single ISIN
+data = query.search_by_isin('US0378331005')  # Apple Inc.
+
+# Returns a Hash with the ISIN as key
+data['US0378331005']
+# {
+#   symbol: "AAPL",
+#   short_name: "Apple Inc.",
+#   long_name: "Apple Inc.",
+#   exchange: "NMS",
+#   exchange_display: "NASDAQ",
+#   quote_type: "EQUITY",
+#   type_display: "Equity",
+#   sector: "Technology",
+#   sector_display: "Technology",
+#   industry: "Consumer Electronics",
+#   industry_display: "Consumer Electronics"
+# }
+
+# Search by multiple ISINs
+data = query.search_by_isin(['US0378331005', 'US5949181045'])
+```
+
+Note: If you only need the symbol, use `find_symbol_by_isin` instead which returns just the symbol string.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
